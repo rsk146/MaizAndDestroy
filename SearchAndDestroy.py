@@ -3,6 +3,8 @@ import itertools
 import random
 import pprint
 import copy
+import time
+import visualizer as vis
 
 #negative probability square is the one with the target, so always use abs(prob)
 def generate_map():
@@ -66,6 +68,7 @@ def agent_one(grid):
     found_target = False
     score = 0
     while not found_target:
+        vis.display_landscape(grid, x, y)
         score +=1
         path.append((x,y))
         if check_square(grid, x, y):
@@ -111,6 +114,7 @@ def agent_two(grid):
     found_target = False
     score = 0
     while not found_target:
+        #vis.display_landscape(grid, x, y)
         score +=1
         path.append((x,y))
         if check_square(grid, x,y):
@@ -123,5 +127,6 @@ def agent_two(grid):
     print(x,y)
     print(score)
     #print(path)
+
 #agent_one(generate_map())
-#agent_two(generate_map())
+agent_two(generate_map())
