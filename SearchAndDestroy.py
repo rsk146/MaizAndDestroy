@@ -143,6 +143,7 @@ def agent_improved(grid):
     x, y = random.randint(0, 49), random.randint(0,49)
     #print("Start: " + str((x,y)))
     found_target = False
+    printed = False
     score = 0
     while not found_target:
         #vis.display_landscape(grid, x, y)
@@ -154,8 +155,11 @@ def agent_improved(grid):
             unvisited.discard((x,y))
             update_belief(grid, belief, x, y)
             update_prob(grid, prob, belief, x, y)
-            x_prime, y_prime = highest_nearby_prob(x,y,prob) if (len(unvisited) > 0) else highest_nearby_prob(x,y,belief)
-
+            x_prime, y_prime = highest_nearby_prob(x,y,prob) #if (len(unvisited) > 0) else highest_nearby_prob(x,y,belief)
+            if(len(unvisited) == 0 and not printed):
+                printed = True
+                print("Visited everything when score = " + str(score))
+            
             score += abs(x_prime - x) + abs(y_prime - y)
             x, y = x_prime, y_prime
     #print(x,y)
@@ -190,6 +194,7 @@ trials = 10
 
 for iterative in range(trials):
     grid = generate_map()
+    print(str(iterative))
     if(iterative < 10):
         score1 += agent_one(grid)
         score2 += agent_two(grid)
@@ -200,7 +205,6 @@ for iterative in range(trials):
     else:
         score5 += agent_one(grid)
         score6 += agent_two(grid)
-    print(str(iterative))
 
 print("Trial 1")
 print("Avg Agent 1 Score: " + str(score1/10))
