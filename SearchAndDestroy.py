@@ -153,7 +153,6 @@ def agent_improved(grid):
         for j in range(50):
             unvisited.append((i,j))
     unvisited = set(unvisited)
-
     x, y = random.randint(0, 49), random.randint(0,49)
     #print("Start: " + str((x,y)))
     found_target = False
@@ -208,33 +207,33 @@ def update_grid(grid, X, Y):
     grid[newTargX][newTargY] = -1* grid[newTargX][newTargY]
     return newTargX, newTargY
 
-def update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors):
-    #old_belief = copy.deepcopy(belief)
-    p = abs(grid[x][y])
-    denom_one= 1 - belief[x][y]*(1-p)
-    man_five_denom = sum_beliefs(belief, x, y, man_five_neighbors)
-    if not man_five:
-        man_five_denom = 1- man_five_denom
-    max_x, max_y = (0, 0)
-    for i in range(50):
-        for j in range(50):
-            if (i,j) == (x, y):
-                continue
-            man_five_num = man_five_belief_num(i,j, man_five_neighbors, man_five)
-            belief[i][j] = belief[i][j]*man_five_num/(denom_one * man_five_denom)
-            if belief[i][j] > belief[max_x][max_y]:
-                max_x, max_y = i, j
-            elif belief[i][j] == belief[max_x][max_y]:
-                max_dist = abs(max_x - x) + abs(max_y -y)
-                curr_dist = abs(i -x) + abs(j - y)
-                if curr_dist < max_dist:
-                    max_x, max_y = i, j
-    man_five_num = man_five_belief_num(x, y, man_five_neighbors, man_five)
-    belief[x][y] = p*belief[x][y]*man_five_num/(denom_one*man_five_denom)
-    if belief[x][y] >= belief[max_x][max_y]:
-        max_x, max_y = x, y
-    check_belief_array(belief)
-    return max_x, max_y
+# def update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors):
+#     #old_belief = copy.deepcopy(belief)
+#     p = abs(grid[x][y])
+#     denom_one= 1 - belief[x][y]*(1-p)
+#     man_five_denom = sum_beliefs(belief, x, y, man_five_neighbors)
+#     if not man_five:
+#         man_five_denom = 1- man_five_denom
+#     max_x, max_y = (0, 0)
+#     for i in range(50):
+#         for j in range(50):
+#             if (i,j) == (x, y):
+#                 continue
+#             man_five_num = man_five_belief_num(i,j, man_five_neighbors, man_five)
+#             belief[i][j] = belief[i][j]*man_five_num/(denom_one * man_five_denom)
+#             if belief[i][j] > belief[max_x][max_y]:
+#                 max_x, max_y = i, j
+#             elif belief[i][j] == belief[max_x][max_y]:
+#                 max_dist = abs(max_x - x) + abs(max_y -y)
+#                 curr_dist = abs(i -x) + abs(j - y)
+#                 if curr_dist < max_dist:
+#                     max_x, max_y = i, j
+#     man_five_num = man_five_belief_num(x, y, man_five_neighbors, man_five)
+#     belief[x][y] = p*belief[x][y]*man_five_num/(denom_one*man_five_denom)
+#     if belief[x][y] >= belief[max_x][max_y]:
+#         max_x, max_y = x, y
+#     check_belief_array(belief)
+#     return max_x, max_y
 
 def sum_beliefs(belief, x, y, man_five):
     total_belief = 0
@@ -255,7 +254,7 @@ def bonus_agent_one(grid, targX, targY):
     found_target = False
     score = 0
     while not found_target:
-        vis.display_landscape(grid, x, y)
+        #vis.display_landscape(grid, x, y)
         score+=1
         man_five = False
         man_five_neighbors = manhattan_five_neighbors(grid, x, y)
@@ -299,8 +298,9 @@ def utilize_man(grid, belief, x, y, man_five, man_five_neighbors):
     belief[x][y] = belief[x][y]*man_five_num/(man_five_denom)
     if belief[x][y] >= belief[max_x][max_y]:
         max_x, max_y = x, y
-    if check_belief_array(belief):
-        print("good")
+    #if check_belief_array(belief):
+        #pass
+        #print("good")
     return max_x, max_y
 
 def propagate_probabilities(belief):
@@ -319,6 +319,72 @@ def manhattan_five_neighbors(grid, targX, targY):
     neighbors = list(itertools.product(range(targX-5, targX+6), range(targY-5, targY+6)))
     properNeighbors = list(filter(lambda x: (0<=x[0]< 50 and 0<=x[1]< 50 and (abs(x[0]-targX) + abs(x[1]-targY)) < 6), neighbors))
     return properNeighbors
+
+def bonus_agent_two(grid, targX, targY):
+    belief = [[1/2500.]*50 for i in range(50)]
+    prob = initialize_prob_array(grid)
+    x, y = random.randint(0, 49), random.randint(0, 49)
+    found_target = False
+    score = 0
+    while not found_target:
+        #vis.display_landscape(grid, x, y)
+        score+=1
+        man_five = False
+        man_five_neighbors = manhattan_five_neighbors(grid, x, y)
+        if (targX,targY) in man_five_neighbors:
+            man_five = True
+        if check_square(grid, x, y):
+            found_target = True
+        else:
+            # x_prime, y_prime = update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors)
+            update_belief(grid, belief, x, y)
+            utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
+            x_prime, y_prime = update_prob(grid, prob, belief, x, y)
+            score += abs(x_prime - x) + abs(y_prime - y)
+            x, y = x_prime, y_prime
+        if not found_target:
+            targX, targY = update_grid(grid, targX, targY)
+            belief = propagate_probabilities(belief)
+    print("Agent 2: " + str(score))
+    return score
+
+def bonus_agent_improved(grid, targX, targY):
+    belief = [[1/2500.]*50 for i in range(50)]
+    prob = initialize_prob_array(grid)
+    x, y = random.randint(0, 49), random.randint(0, 49)
+    found_target = False
+    score = 0
+    unvisited = []
+    for i in range(50):
+        for j in range(50):
+            unvisited.append((i,j))
+    unvisited = set(unvisited)
+    printed False
+    while not found_target:
+        score +=1
+        man_five = False
+        man_five_neighbors = manhattan_five_neighbors(grid, x, y)
+        if (targX,targY) in man_five_neighbors:
+            man_five = True
+        if check_square(grid, x,y):
+            found_target = True
+        else:
+            unvisited.discard((x,y))
+            update_belief(gird, belief, x, y)
+            utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
+            update_prob(grid, prob, belief, x, y)
+            x_prime, y_prime = highest_nearby_prob(x,y,prob) #if (len(unvisited) > 0) else highest_nearby_prob(x,y,belief)
+            if(len(unvisited) == 0 and not printed):
+                printed = True
+                print("Visited everything when score = " + str(score))
+            
+            score += abs(x_prime - x) + abs(y_prime - y)
+            x, y = x_prime, y_prime
+        if not found_target:
+            targX, targY = update_grid(grid, targX, targY)
+            belief = propagate_probabilities(belief)
+    print("Agent Improved: " + str(score))
+    return score
 
 
 
