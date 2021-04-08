@@ -4,7 +4,7 @@ import random
 import pprint
 import copy
 import time
-#import visualizer as vis
+import visualizer as vis
 
 #negative probability square is the one with the target, so always use abs(prob)
 def generate_map():
@@ -209,7 +209,7 @@ def update_grid(grid, X, Y):
     return newTargX, newTargY
 
 def update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors):
-    old_belief = copy.deepcopy(belief)
+    #old_belief = copy.deepcopy(belief)
     p = abs(grid[x][y])
     denom_one= 1 - belief[x][y]*(1-p)
     man_five_denom = sum_beliefs(belief, x, y, man_five_neighbors)
@@ -221,7 +221,7 @@ def update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors):
             if (i,j) == (x, y):
                 continue
             man_five_num = man_five_belief_num(i,j, man_five_neighbors, man_five)
-            belief[i][j] = old_belief[i][j]*man_five_num/(denom_one * man_five_denom)
+            belief[i][j] = belief[i][j]*man_five_num/(denom_one * man_five_denom)
             if belief[i][j] > belief[max_x][max_y]:
                 max_x, max_y = i, j
             elif belief[i][j] == belief[max_x][max_y]:
@@ -229,7 +229,8 @@ def update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors):
                 curr_dist = abs(i -x) + abs(j - y)
                 if curr_dist < max_dist:
                     max_x, max_y = i, j
-    belief[x][y] = p*belief[x][y]/(denom*man_five_denom)
+    man_five_num = man_five_belief_num(x, y, man_five_neighbors, man_five)
+    belief[x][y] = p*belief[x][y]*man_five_num/(denom_one*man_five_denom)
     if belief[x][y] >= belief[max_x][max_y]:
         max_x, max_y = x, y
     check_belief_array(belief)
@@ -254,6 +255,7 @@ def bonus_agent_one(grid, targX, targY):
     found_target = False
     score = 0
     while not found_target:
+        vis.display_landscape(grid, x, y)
         score+=1
         man_five = False
         man_five_neighbors = manhattan_five_neighbors(grid, x, y)
@@ -268,6 +270,8 @@ def bonus_agent_one(grid, targX, targY):
         if not found_target:
             targX, targY = update_grid(grid, targX, targY)
             belief = propagate_probabilities(belief)
+    print("Agent 1: " + str(score))
+    return score
 
 def propagate_probabilities(belief):
     new_belief = [[0]*50 for i in range(50)]
@@ -283,7 +287,7 @@ def propagate_probabilities(belief):
 
 def manhattan_five_neighbors(grid, targX, targY):
     neighbors = list(itertools.product(range(targX-5, targX+6), range(targY-5, targY+6)))
-    properNeighbors = list(filter(lambda x: (0<=x[0]< dim and 0<=x[1]<dim and (abs(x[0]-targX) + abs(x[1]-targY)) < 6), neighbors))
+    properNeighbors = list(filter(lambda x: (0<=x[0]< 50 and 0<=x[1]< 50 and (abs(x[0]-targX) + abs(x[1]-targY)) < 6), neighbors))
     return properNeighbors
 
 
@@ -320,3 +324,6 @@ def manhattan_five_neighbors(grid, targX, targY):
 # # print("Trial 3")
 # # print("Avg Agent 1 Score: " + str(score5/10))
 # # print("Avg Agent 2 Score: " + str(score6/10))
+
+grid, targX, targY = generate_advanced_maze()
+score_bonus = bonus_agent_one(grid, targX, targY)

@@ -45,7 +45,7 @@ def display_landscape(grid, x, y):
                                                 (margin+ height) * row + margin,
                                                 width, height])
     #fps for updating the maze visually
-    clock.tick(60)
+    clock.tick(20)
     #update display
     pygame.display.update()
     pygame.display.flip()
