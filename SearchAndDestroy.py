@@ -264,7 +264,9 @@ def bonus_agent_one(grid, targX, targY):
         if check_square(grid, x, y):
             found_target = True
         else:
-            x_prime, y_prime = update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors)
+            # x_prime, y_prime = update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors)
+            update_belief(grid, belief, x, y)
+            x_prime, y_prime = utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
             score += abs(x_prime - x) + abs(y_prime - y)
             x, y = x_prime, y_prime
         if not found_target:
@@ -272,6 +274,34 @@ def bonus_agent_one(grid, targX, targY):
             belief = propagate_probabilities(belief)
     print("Agent 1: " + str(score))
     return score
+
+def utilize_man(grid, belief, x, y, man_five, man_five_neighbors):
+    #old_belief = copy.deepcopy(belief)
+    p = abs(grid[x][y])
+    man_five_denom = sum_beliefs(belief, x, y, man_five_neighbors)
+    if not man_five:
+        man_five_denom = 1- man_five_denom
+    max_x, max_y = (0, 0)
+    for i in range(50):
+        for j in range(50):
+            if (i,j) == (x, y):
+                continue
+            man_five_num = man_five_belief_num(i,j, man_five_neighbors, man_five)
+            belief[i][j] = belief[i][j]*man_five_num/(man_five_denom)
+            if belief[i][j] > belief[max_x][max_y]:
+                max_x, max_y = i, j
+            elif belief[i][j] == belief[max_x][max_y]:
+                max_dist = abs(max_x - x) + abs(max_y -y)
+                curr_dist = abs(i -x) + abs(j - y)
+                if curr_dist < max_dist:
+                    max_x, max_y = i, j
+    man_five_num = man_five_belief_num(x, y, man_five_neighbors, man_five)
+    belief[x][y] = belief[x][y]*man_five_num/(man_five_denom)
+    if belief[x][y] >= belief[max_x][max_y]:
+        max_x, max_y = x, y
+    if check_belief_array(belief):
+        print("good")
+    return max_x, max_y
 
 def propagate_probabilities(belief):
     new_belief = [[0]*50 for i in range(50)]
