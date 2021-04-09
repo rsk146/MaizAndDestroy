@@ -4,7 +4,7 @@ import random
 import pprint
 import copy
 import time
-import visualizer as vis
+# import visualizer as vis
 
 #negative probability square is the one with the target, so always use abs(prob)
 def generate_map():
@@ -253,6 +253,7 @@ def bonus_agent_one(grid, targX, targY):
     x, y = random.randint(0, 49), random.randint(0, 49)
     found_target = False
     score = 0
+    count = 0
     while not found_target:
         #vis.display_landscape(grid, x, y)
         score+=1
@@ -263,15 +264,23 @@ def bonus_agent_one(grid, targX, targY):
         if check_square(grid, x, y):
             found_target = True
         else:
+            if((x,y) == (targX, targY)):
+                count += 1
+                print(count)
             # x_prime, y_prime = update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors)
             update_belief(grid, belief, x, y)
             x_prime, y_prime = utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
+            x_prime, y_prime = get_random_best(belief, x, y, belief[x_prime][y_prime], abs(x_prime-x) + abs(y_prime - y))
             score += abs(x_prime - x) + abs(y_prime - y)
             x, y = x_prime, y_prime
         if not found_target:
             targX, targY = update_grid(grid, targX, targY)
             belief = propagate_probabilities(belief)
+            # print(str((targX,targY)) + "with prob " + str(belief[targX][targY]))
+            if not check_belief_array(belief):
+                print("bad")
     print("Agent 1: " + str(score))
+    print("Missed Targets: " + str(count))
     return score
 
 def utilize_man(grid, belief, x, y, man_five, man_five_neighbors):
@@ -326,6 +335,7 @@ def bonus_agent_two(grid, targX, targY):
     x, y = random.randint(0, 49), random.randint(0, 49)
     found_target = False
     score = 0
+    count = 0
     while not found_target:
         #vis.display_landscape(grid, x, y)
         score+=1
@@ -336,6 +346,10 @@ def bonus_agent_two(grid, targX, targY):
         if check_square(grid, x, y):
             found_target = True
         else:
+            if((x,y) == (targX, targY)):
+                count += 1
+                print(count)
+                #print(count)
             # x_prime, y_prime = update_belief_advanced(grid, belief, x, y, man_five, man_five_neighbors)
             update_belief(grid, belief, x, y)
             utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
@@ -345,7 +359,12 @@ def bonus_agent_two(grid, targX, targY):
         if not found_target:
             targX, targY = update_grid(grid, targX, targY)
             belief = propagate_probabilities(belief)
+            #print(str((targX,targY)) + " with prob " + str(belief[targX][targY]))
+            if not check_belief_array(belief):
+                print("bad")
     print("Agent 2: " + str(score))
+    print("Missed Targets: " + str(count))
+    #print(count)
     return score
 
 def bonus_agent_improved(grid, targX, targY):
@@ -354,13 +373,15 @@ def bonus_agent_improved(grid, targX, targY):
     x, y = random.randint(0, 49), random.randint(0, 49)
     found_target = False
     score = 0
+    count = 0
     unvisited = []
     for i in range(50):
         for j in range(50):
             unvisited.append((i,j))
     unvisited = set(unvisited)
-    printed False
+    printed = False
     while not found_target:
+        # vis.display_landscape(grid, x, y)
         score +=1
         man_five = False
         man_five_neighbors = manhattan_five_neighbors(grid, x, y)
@@ -369,14 +390,17 @@ def bonus_agent_improved(grid, targX, targY):
         if check_square(grid, x,y):
             found_target = True
         else:
+            if((x,y) == (targX, targY)):
+                count += 1
+                print(count)
             unvisited.discard((x,y))
-            update_belief(gird, belief, x, y)
-            utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
-            update_prob(grid, prob, belief, x, y)
-            x_prime, y_prime = highest_nearby_prob(x,y,prob) #if (len(unvisited) > 0) else highest_nearby_prob(x,y,belief)
+            update_belief(grid, belief, x, y)
+            x_prime, y_prime = utilize_man(grid, belief, x, y, man_five, man_five_neighbors)
+            if(man_five):
+                x_prime, y_prime = update_prob(grid, prob, belief, x, y)
             if(len(unvisited) == 0 and not printed):
                 printed = True
-                print("Visited everything when score = " + str(score))
+                #print("Visited everything when score = " + str(score))
             
             score += abs(x_prime - x) + abs(y_prime - y)
             x, y = x_prime, y_prime
@@ -384,36 +408,65 @@ def bonus_agent_improved(grid, targX, targY):
             targX, targY = update_grid(grid, targX, targY)
             belief = propagate_probabilities(belief)
     print("Agent Improved: " + str(score))
+    print("Missed Targets: " + str(count))
     return score
 
+def get_random_best(mat, x, y, minProb, minDist):
+    eqlist = []
+    for i in range(50):
+        for j in range(50):
+            if(mat[i][j] == minProb and minDist == abs(x-i)+abs(y-j)):
+                eqlist.append((i,j))
+    return eqlist[0] if len(eqlist) == 1 else eqlist[random.randint(0, len(eqlist)-1)]
+
+def highest_nearby_prob_adv(x,y,belief):
+    #Depending on which belief is passed in, will return highest adjacent probability
+    #Probability of finding the agent OR probability of containing the agent
+    max = 0
+    dist = 0
+    eqlist = []
+    neighbors = list(itertools.product(range(targX-10, targX+11), range(targY-10, targY+11)))
+    properNeighbors = list(filter(lambda x: (0<=x[0]< 50 and 0<=x[1]< 50 and (abs(x[0]-targX) + abs(x[1]-targY)) <= 10), neighbors))
+    for i,j in properNeighbors:
+        if(belief[i][j] > max) or (belief[i][j] == max and dist > abs(i-x)+abs(y-j)):
+            max = belief[i][j]
+            dist = abs(i-x) + abs(j-y)
+            eqlist = []
+            eqlist.append((i,j))
+        elif belief[i][j] == max and dist == abs(i-x)+abs(y-j):
+            eqlist.append((i,j))
+    
+    item = eqlist[0] if len(eqlist) == 1 else eqlist[random.randint(0, len(eqlist)-1)]
+    #print(belief[item[0]][item[1]])
+    return item
 
 
-# score1 = 0
-# score2 = 0
-# score3 = 0
-# score4 = 0
-# score5 = 0
-# score6 = 0
-# trials = 10
+score1 = 0
+score2 = 0
+score3 = 0
+score4 = 0
+score5 = 0
+score6 = 0
+trials = 10
 
-# for iterative in range(trials):
-#     print(str(iterative))
-#     grid = generate_map()
-#     if(iterative < 10):
-#         score1 += agent_one(grid)
-#         score2 += agent_two(grid)
-#         score3 += agent_improved(grid)
-#     elif (iterative < 20):
-#         score3 += agent_one(grid)
-#         score4 += agent_two(grid)
-#     else:
-#         score5 += agent_one(grid)
-#         score6 += agent_two(grid)
+for iterative in range(trials):
+    print(str(iterative))
+    grid = generate_map()
+    if(iterative < 10):
+        score1 += agent_one(grid)
+        score2 += agent_two(grid)
+        score3 += agent_improved(grid)
+    elif (iterative < 20):
+        score3 += agent_one(grid)
+        score4 += agent_two(grid)
+    else:
+        score5 += agent_one(grid)
+        score6 += agent_two(grid)
 
-# print("Trial 1")
-# print("Avg Agent 1 Score: " + str(score1/10))
-# print("Avg Agent 2 Score: " + str(score2/10))
-# print("Avg Agent Improved Score: " + str(score3/10))
+print("Trial 1")
+print("Avg Agent 1 Score: " + str(score1/10))
+print("Avg Agent 2 Score: " + str(score2/10))
+print("Avg Agent Improved Score: " + str(score3/10))
 # # print("Trial 2")
 # # print("Avg Agent 1 Score: " + str(score3/10))
 # # print("Avg Agent 2 Score: " + str(score4/10))
@@ -421,5 +474,21 @@ def bonus_agent_improved(grid, targX, targY):
 # # print("Avg Agent 1 Score: " + str(score5/10))
 # # print("Avg Agent 2 Score: " + str(score6/10))
 
-grid, targX, targY = generate_advanced_maze()
-score_bonus = bonus_agent_one(grid, targX, targY)
+# grid, targX, targY = generate_advanced_maze()
+# score1 = 0
+# score2 = 0
+# score3 = 0
+# trials = 10
+
+# for iterative in range(trials):
+#     print(str(iterative))
+#     grid, targX, targY = generate_advanced_maze()
+#     score1 += bonus_agent_one(grid, targX, targY)
+#     score2 += bonus_agent_two(grid, targX, targY)
+#     score3 += bonus_agent_improved(grid, targX, targY)
+
+# print("Avg Agent 1 Score: " + str(score1/10))
+# print("Avg Agent 2 Score: " + str(score2/10))
+# print("Avg Agent Improved Score: " + str(score3/10))
+
+# score_bonus = bonus_agent_improved(grid, targX, targY)
